@@ -70,26 +70,29 @@ export function ResultChart({ options, votes: initialVotes }: ResultChartProps) 
   }, [options, votes])
 
   return (
-    <div className="space-y-6">
+    <div>
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
             layout="vertical"
             margin={{
-              left: 16,
-              right: 16,
-              top: 20,
+              left: -32,
+              right: 100,
+              top: 0,
               bottom: 0
             }}
           >
-            <CartesianGrid horizontal={false} />
+            <CartesianGrid horizontal={false} strokeDasharray="3 3" />
             <XAxis
               type="number"
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
               axisLine={false}
+              tickMargin={4}
+              tickCount={5}
+              minTickGap={20}
             />
             <YAxis
               type="category"
@@ -98,20 +101,21 @@ export function ResultChart({ options, votes: initialVotes }: ResultChartProps) 
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              width={150}
+              width={100}
+              dx={-4}
               tickFormatter={(value) => 
-                value.length > 25 ? value.substring(0, 22) + '...' : value
+                value.length > 20 ? value.substring(0, 17) + '...' : value
               }
             />
             <Bar
               dataKey="votes"
               fill="hsl(var(--primary))"
               radius={[0, 4, 4, 0]}
-              maxBarSize={30}
+              barSize={24}
             >
               <LabelList
                 position="right"
-                offset={12}
+                offset={8}
                 className="fill-foreground"
                 fontSize={12}
                 formatter={(value) => (typeof value === 'number' ? `${value} suara` : '')}

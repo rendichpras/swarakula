@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Share2, Copy, QrCode } from 'lucide-react'
 import { toast } from 'sonner'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 
 interface ShareVotingProps {
   votingId: string
@@ -22,6 +23,7 @@ interface ShareVotingProps {
 
 export function ShareVoting({ votingId, title }: ShareVotingProps) {
   const [isQrVisible, setIsQrVisible] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   const votingUrl = `${window.location.origin}/vote/${votingId}`
 
   const handleCopyLink = async () => {
@@ -34,11 +36,16 @@ export function ShareVoting({ votingId, title }: ShareVotingProps) {
   }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Share2 className="h-4 w-4" />
-        </Button>
+        <button
+          type="button"
+          className="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent focus:bg-accent"
+          onClick={() => setIsOpen(true)}
+        >
+          <Share2 className="mr-2 h-4 w-4" />
+          Bagikan
+        </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

@@ -57,7 +57,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/create">
+          <Link href="/dashboard/create">
             <Plus className="mr-2 h-4 w-4" />
             Buat Voting
           </Link>

@@ -28,7 +28,7 @@ import { ShareVoting } from '@/components/ShareVoting'
 import { createClient } from '@/lib/supabase'
 import { Database } from '@/types/supabase'
 import { useUser } from '@/hooks/useUser'
-import { MoreVertical, Trash2, Ban, BarChart } from 'lucide-react'
+import { MoreVertical, Trash2, Ban } from 'lucide-react'
 import { toast } from 'sonner'
 
 type Voting = Database['public']['Tables']['votings']['Row']
@@ -157,23 +157,36 @@ export function VotingCard({ voting: initialVoting, onVotingUpdate, onVotingDele
     locale: idLocale
   })
 
+  const handleCardClick = () => {
+    if (isCreator) {
+      router.push(`/dashboard/stats/${voting.id}`)
+    }
+  }
+
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
+    <div 
+      className={`rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md ${isCreator ? 'cursor-pointer' : ''}`}
+      onClick={handleCardClick}
+    >
       <div className="space-y-1.5 p-6">
         <div className="flex items-start justify-between">
           <h3 className="line-clamp-1 text-lg font-semibold leading-none tracking-tight">
             {voting.title}
           </h3>
-          <div className="flex items-center gap-2">
-            <ShareVoting votingId={voting.id} title={voting.title} />
-            {isCreator && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={(e) => e.stopPropagation()} // Prevent card click when clicking dropdown
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <ShareVoting votingId={voting.id} title={voting.title} />
+              {isCreator && (
+                <>
                   {!isEnded && (
                     <DropdownMenuItem onClick={() => setIsEndDialogOpen(true)}>
                       <Ban className="mr-2 h-4 w-4" />
@@ -188,10 +201,10 @@ export function VotingCard({ voting: initialVoting, onVotingUpdate, onVotingDele
                     <Trash2 className="mr-2 h-4 w-4" />
                     Hapus
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <p className="line-clamp-2 text-sm text-muted-foreground">
           {voting.description}
@@ -215,27 +228,20 @@ export function VotingCard({ voting: initialVoting, onVotingUpdate, onVotingDele
           <span className="text-sm">
             {voting.multiple_choice ? 'Pilihan Ganda' : 'Pilihan Tunggal'}
           </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              asChild
-            >
-              <Link href={`/vote/${voting.id}/stats`}>
-                <BarChart className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant={isEnded ? "outline" : "default"}>
-              <Link href={`/vote/${voting.id}`}>
-                {isEnded ? 'Lihat Hasil' : 'Lihat & Vote'}
-              </Link>
-            </Button>
-          </div>
+          <Button 
+            asChild 
+            variant={isEnded ? "outline" : "default"}
+            onClick={(e) => e.stopPropagation()} // Prevent card click when clicking vote button
+          >
+            <Link href={`/vote/${voting.id}`}>
+              {isEnded ? 'Lihat Hasil' : 'Lihat & Vote'}
+            </Link>
+          </Button>
         </div>
       </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Voting?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -256,7 +262,7 @@ export function VotingCard({ voting: initialVoting, onVotingUpdate, onVotingDele
       </AlertDialog>
 
       <AlertDialog open={isEndDialogOpen} onOpenChange={setIsEndDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Akhiri Voting?</AlertDialogTitle>
             <AlertDialogDescription>

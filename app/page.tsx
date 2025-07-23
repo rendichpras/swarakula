@@ -1,5 +1,3 @@
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { Vote } from 'lucide-react'
 
 export default function Home() {
@@ -15,11 +13,6 @@ export default function Home() {
             Buat dan kelola voting dengan mudah. Dapatkan hasil secara real-time.
             Gratis untuk semua orang.
           </p>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
-            <Button className="w-full sm:w-auto" asChild size="lg">
-              <Link href="/create">Buat Voting</Link>
-            </Button>
-          </div>
         </div>
       </section>
     </main>

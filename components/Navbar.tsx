@@ -22,14 +22,6 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {user && pathname !== '/create' && (
-            <Button asChild size="sm" className="sm:size-md">
-              <Link href="/create" className="flex items-center whitespace-nowrap">
-                <Plus className="mr-1 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Buat Voting</span>
-              </Link>
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="icon"

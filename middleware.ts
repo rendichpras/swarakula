@@ -37,13 +37,18 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
 
   // Jika user mencoba mengakses halaman create tanpa login
-  if (request.nextUrl.pathname === '/create' && !session) {
+  if (request.nextUrl.pathname === '/dashboard' && !session) {
     return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Jika user mencoba mengakses halaman login sudah login
+  if (request.nextUrl.pathname === '/auth/login' && session) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return response
 }
 
 export const config = {
-  matcher: ['/create', '/auth/callback']
+  matcher: ['/dashboard', '/auth/callback', '/auth/login']
 } 

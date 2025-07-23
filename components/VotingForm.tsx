@@ -100,7 +100,7 @@ export function VotingForm() {
 
           if (optionsError) throw optionsError
 
-          router.push(`/vote/${voting.id}`)
+          router.push(`/dashboard`)
           router.refresh()
           
           return voting

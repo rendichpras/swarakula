@@ -94,7 +94,7 @@ export function VotingList({ userId }: VotingListProps) {
           {userId ? 'Anda belum membuat voting apapun.' : 'Belum ada voting yang tersedia.'}
         </p>
         <Button asChild>
-          <Link href="/create">Buat Voting</Link>
+          <Link href="/dashboard/create">Buat Voting</Link>
         </Button>
       </div>
     )
