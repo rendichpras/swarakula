@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -64,43 +65,57 @@ export function VotingForm() {
   })
 
   const onSubmit = async (data: FormValues) => {
-    if (!user) return
-    setIsSubmitting(true)
-
-    try {
-      const { data: voting, error: votingError } = await supabase
-        .from('votings')
-        .insert({
-          creator_id: user.id,
-          title: data.title,
-          description: data.description,
-          end_at: new Date(data.end_at).toISOString(),
-          multiple_choice: data.multiple_choice,
-          reveal_mode: data.reveal_mode
-        })
-        .select()
-        .single()
-
-      if (votingError) throw votingError
-
-      const options = data.options.map(option => ({
-        voting_id: voting.id,
-        text: option.value
-      }))
-
-      const { error: optionsError } = await supabase
-        .from('options')
-        .insert(options)
-
-      if (optionsError) throw optionsError
-
-      router.push(`/vote/${voting.id}`)
-      router.refresh()
-    } catch (error) {
-      console.error('Error creating voting:', error)
-    } finally {
-      setIsSubmitting(false)
+    if (!user) {
+      toast.error('Anda harus login untuk membuat voting')
+      return
     }
+    
+    setIsSubmitting(true)
+    toast.promise(
+      async () => {
+        try {
+          const { data: voting, error: votingError } = await supabase
+            .from('votings')
+            .insert({
+              creator_id: user.id,
+              title: data.title,
+              description: data.description,
+              end_at: new Date(data.end_at).toISOString(),
+              multiple_choice: data.multiple_choice,
+              reveal_mode: data.reveal_mode
+            })
+            .select()
+            .single()
+
+          if (votingError) throw votingError
+
+          const options = data.options.map(option => ({
+            voting_id: voting.id,
+            text: option.value
+          }))
+
+          const { error: optionsError } = await supabase
+            .from('options')
+            .insert(options)
+
+          if (optionsError) throw optionsError
+
+          router.push(`/vote/${voting.id}`)
+          router.refresh()
+          
+          return voting
+        } catch (error) {
+          console.error('Error creating voting:', error)
+          throw error
+        }
+      },
+      {
+        loading: 'Membuat voting...',
+        success: 'Voting berhasil dibuat!',
+        error: 'Gagal membuat voting. Silakan coba lagi.',
+      }
+    )
+    setIsSubmitting(false)
   }
 
   return (

@@ -12,6 +12,7 @@ import { useUser } from '@/hooks/useUser'
 import { LogIn, LogOut, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export function UserButton() {
   const { user } = useUser()
@@ -19,17 +20,34 @@ export function UserButton() {
   const supabase = createClient()
 
   const handleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      
+      if (error) throw error
+      
+      toast.success('Redirecting to Google login...')
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Gagal login. Silakan coba lagi.')
+    }
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      
+      router.refresh()
+      toast.success('Berhasil logout')
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Gagal logout. Silakan coba lagi.')
+    }
   }
 
   if (!user) {

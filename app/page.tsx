@@ -45,6 +45,6 @@ export default function Home() {
           <VotingList />
         </div>
       </section>
-    </main>
+      </main>
   )
 }

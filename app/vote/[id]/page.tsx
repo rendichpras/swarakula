@@ -5,6 +5,7 @@ import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -70,6 +71,7 @@ export default function VotePage({ params }: VotePageProps) {
         setHasVoted(!!userVote)
       } catch (error) {
         console.error('Error fetching voting:', error)
+        toast.error('Gagal memuat data voting')
         router.push('/')
       } finally {
         setLoading(false)
@@ -103,26 +105,59 @@ export default function VotePage({ params }: VotePageProps) {
   }, [id, router, supabase])
 
   const handleVote = async () => {
-    if (!voting || selectedOptions.length === 0) return
-    setSubmitting(true)
-
-    try {
-      const voterUUID = getVoterUUID()
-      const votes = selectedOptions.map(optionId => ({
-        voting_id: voting.id,
-        option_id: optionId,
-        voter_uuid: voterUUID
-      }))
-
-      const { error } = await supabase.from('votes').insert(votes)
-      if (error) throw error
-
-      setHasVoted(true)
-    } catch (error) {
-      console.error('Error submitting vote:', error)
-    } finally {
-      setSubmitting(false)
+    if (!voting || selectedOptions.length === 0) {
+      toast.error('Pilih minimal satu opsi')
+      return
     }
+    
+    setSubmitting(true)
+    toast.promise(
+      async () => {
+        try {
+          const voterUUID = getVoterUUID()
+          
+          // Cek apakah user sudah vote untuk opsi yang dipilih
+          const { data: existingVotes, error: checkError } = await supabase
+            .from('votes')
+            .select('option_id')
+            .eq('voting_id', voting.id)
+            .eq('voter_uuid', voterUUID)
+
+          if (checkError) throw checkError
+
+          // Filter out opsi yang sudah di-vote
+          const votedOptionIds = existingVotes?.map(v => v.option_id) || []
+          const newOptions = selectedOptions.filter(optionId => !votedOptionIds.includes(optionId))
+
+          if (newOptions.length === 0) {
+            setHasVoted(true)
+            return { message: 'Anda sudah memilih semua opsi ini' }
+          }
+
+          // Insert vote untuk opsi yang belum di-vote
+          const votes = newOptions.map(optionId => ({
+            voting_id: voting.id,
+            option_id: optionId,
+            voter_uuid: voterUUID
+          }))
+
+          const { error } = await supabase.from('votes').insert(votes)
+          if (error) throw error
+
+          setHasVoted(true)
+          return { message: 'Vote berhasil disimpan' }
+        } catch (error) {
+          console.error('Error submitting vote:', error)
+          throw error
+        }
+      },
+      {
+        loading: 'Menyimpan vote...',
+        success: (data) => data.message,
+        error: 'Gagal menyimpan vote. Silakan coba lagi.',
+      }
+    )
+    setSubmitting(false)
   }
 
   const handleOptionChange = (optionId: string) => {
