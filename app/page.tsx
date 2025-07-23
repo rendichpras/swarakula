@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Vote } from 'lucide-react'
-import { VotingList } from '@/components/VotingList'
 
 export default function Home() {
   return (
@@ -20,31 +19,9 @@ export default function Home() {
             <Button className="w-full sm:w-auto" asChild size="lg">
               <Link href="/create">Buat Voting</Link>
             </Button>
-            <Button className="w-full sm:w-auto" variant="outline" size="lg" asChild>
-              <Link href="#voting-list">Lihat Voting</Link>
-            </Button>
           </div>
         </div>
       </section>
-
-      <section
-        id="voting-list"
-        className="w-full bg-muted/50 px-4 py-12 sm:px-6 sm:py-16 md:py-24"
-      >
-        <div className="container mx-auto max-w-screen-xl">
-          <div className="mx-auto mb-8 flex max-w-[58rem] flex-col items-center space-y-4 text-center sm:mb-12">
-            <h2 className="font-heading text-2xl font-bold leading-[1.1] sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
-              Voting yang Sedang Berlangsung
-            </h2>
-            <p className="max-w-[85%] text-sm leading-normal text-muted-foreground sm:text-base md:text-lg lg:leading-7">
-              Pilih dan berikan suara Anda pada voting yang tersedia.
-              Hasil akan ditampilkan secara real-time.
-            </p>
-          </div>
-
-          <VotingList />
-        </div>
-      </section>
-      </main>
+    </main>
   )
 }

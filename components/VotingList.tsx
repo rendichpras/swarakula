@@ -11,7 +11,11 @@ import { Database } from '@/types/supabase'
 
 type Voting = Database['public']['Tables']['votings']['Row']
 
-export function VotingList() {
+interface VotingListProps {
+  userId?: string
+}
+
+export function VotingList({ userId }: VotingListProps) {
   const [votings, setVotings] = useState<Voting[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -19,10 +23,16 @@ export function VotingList() {
   useEffect(() => {
     const fetchVotings = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('votings')
           .select('*')
           .order('created_at', { ascending: false })
+
+        if (userId) {
+          query = query.eq('creator_id', userId)
+        }
+
+        const { data, error } = await query
 
         if (error) throw error
         setVotings(data || [])
@@ -39,22 +49,31 @@ export function VotingList() {
     const channel = supabase
       .channel('voting_changes')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
-        table: 'votings'
+        table: 'votings',
+        filter: userId ? `creator_id=eq.${userId}` : undefined
       }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setVotings(current => [payload.new as Voting, ...current])
-        } else if (payload.eventType === 'DELETE') {
-          setVotings(current => current.filter(voting => voting.id !== payload.old.id))
-        }
+        setVotings(current => [payload.new as Voting, ...current])
       })
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase])
+  }, [supabase, userId])
+
+  const handleVotingUpdate = (updatedVoting: Voting) => {
+    setVotings(current =>
+      current.map(voting =>
+        voting.id === updatedVoting.id ? updatedVoting : voting
+      )
+    )
+  }
+
+  const handleVotingDelete = (votingId: string) => {
+    setVotings(current => current.filter(voting => voting.id !== votingId))
+  }
 
   if (loading) {
     return (
@@ -72,7 +91,7 @@ export function VotingList() {
         <Vote className="mb-4 h-12 w-12 text-muted-foreground" />
         <h3 className="mb-2 text-lg font-medium">Belum ada voting</h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Mulai dengan membuat voting pertama Anda.
+          {userId ? 'Anda belum membuat voting apapun.' : 'Belum ada voting yang tersedia.'}
         </p>
         <Button asChild>
           <Link href="/create">Buat Voting</Link>
@@ -84,7 +103,12 @@ export function VotingList() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {votings.map((voting) => (
-        <VotingCard key={voting.id} voting={voting} />
+        <VotingCard
+          key={voting.id}
+          voting={voting}
+          onVotingUpdate={handleVotingUpdate}
+          onVotingDelete={handleVotingDelete}
+        />
       ))}
     </div>
   )

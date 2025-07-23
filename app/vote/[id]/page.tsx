@@ -9,10 +9,13 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { ResultChart } from '@/components/ResultChart'
+import { ShareVoting } from '@/components/ShareVoting'
 import { createClient } from '@/lib/supabase'
 import { getVoterUUID } from '@/lib/supabase'
 import { Database } from '@/types/supabase'
+import { BarChart } from 'lucide-react'
+import Link from 'next/link'
+import { useUser } from '@/hooks/useUser'
 
 type Voting = Database['public']['Tables']['votings']['Row']
 type Option = Database['public']['Tables']['options']['Row']
@@ -22,18 +25,16 @@ interface VotePageProps {
   params: Promise<{ id: string }>
 }
 
-// Enable caching for fetch requests in this page
-export const fetchCache = 'default-cache'
-
 export default function VotePage({ params }: VotePageProps) {
-  const router = useRouter()
   const [voting, setVoting] = useState<Voting | null>(null)
   const [options, setOptions] = useState<Option[]>([])
   const [votes, setVotes] = useState<Vote[]>([])
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [hasVoted, setHasVoted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
+  const router = useRouter()
+  const { user } = useUser()
   const supabase = createClient()
   const { id } = use(params)
 
@@ -55,22 +56,20 @@ export default function VotePage({ params }: VotePageProps) {
 
         if (optionsError) throw optionsError
 
+        const voterUUID = getVoterUUID()
         const { data: votes, error: votesError } = await supabase
           .from('votes')
           .select('*')
           .eq('voting_id', id)
+          .eq('voter_uuid', voterUUID)
 
         if (votesError) throw votesError
 
-        const voterUUID = getVoterUUID()
-        const userVote = votes.find(vote => vote.voter_uuid === voterUUID)
-
         setVoting(voting)
         setOptions(options)
-        setVotes(votes)
-        setHasVoted(!!userVote)
+        setHasVoted(votes.length > 0)
       } catch (error) {
-        console.error('Error fetching voting:', error)
+        console.error('Error:', error)
         toast.error('Gagal memuat data voting')
         router.push('/')
       } finally {
@@ -79,30 +78,19 @@ export default function VotePage({ params }: VotePageProps) {
     }
 
     fetchVoting()
-
-    // Subscribe to realtime changes
-    const votesSubscription = supabase
-      .channel('votes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'votes',
-          filter: `voting_id=eq.${id}`
-        },
-        payload => {
-          if (payload.eventType === 'INSERT') {
-            setVotes(current => [...current, payload.new as Vote])
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      votesSubscription.unsubscribe()
-    }
   }, [id, router, supabase])
+
+  const handleOptionChange = (optionId: string) => {
+    if (voting?.multiple_choice) {
+      setSelectedOptions(current =>
+        current.includes(optionId)
+          ? current.filter(id => id !== optionId)
+          : [...current, optionId]
+      )
+    } else {
+      setSelectedOptions([optionId])
+    }
+  }
 
   const handleVote = async () => {
     if (!voting || selectedOptions.length === 0) {
@@ -160,25 +148,6 @@ export default function VotePage({ params }: VotePageProps) {
     setSubmitting(false)
   }
 
-  const handleOptionChange = (optionId: string) => {
-    if (voting?.multiple_choice) {
-      setSelectedOptions(current =>
-        current.includes(optionId)
-          ? current.filter(id => id !== optionId)
-          : [...current, optionId]
-      )
-    } else {
-      setSelectedOptions([optionId])
-    }
-  }
-
-  const showResults = () => {
-    if (!voting) return false
-    if (voting.reveal_mode === 'after_vote' && hasVoted) return true
-    if (voting.reveal_mode === 'after_end' && new Date(voting.end_at) < new Date()) return true
-    return false
-  }
-
   if (loading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
@@ -198,14 +167,19 @@ export default function VotePage({ params }: VotePageProps) {
   return (
     <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-16">
       <div className="w-full max-w-2xl space-y-8">
-        <div className="space-y-4 text-center">
-          <h1 className="font-heading text-3xl font-bold md:text-4xl">{voting.title}</h1>
-          <p className="text-lg text-muted-foreground">
-            {voting.description}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {isEnded ? 'Berakhir' : timeLeft}
-          </p>
+        <div className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h1 className="font-heading text-3xl font-bold md:text-4xl">{voting.title}</h1>
+              <p className="text-lg text-muted-foreground">
+                {voting.description}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isEnded ? 'Berakhir' : timeLeft}
+              </p>
+            </div>
+            <ShareVoting votingId={voting.id} title={voting.title} />
+          </div>
         </div>
 
         {!hasVoted && !isEnded ? (
@@ -255,13 +229,30 @@ export default function VotePage({ params }: VotePageProps) {
               {submitting ? 'Menyimpan...' : 'Kirim Vote'}
             </Button>
           </div>
-        ) : showResults() ? (
-          <ResultChart options={options} votes={votes} />
         ) : (
-          <div className="rounded-lg border p-8 text-center text-muted-foreground">
-            {hasVoted
-              ? 'Hasil akan ditampilkan setelah voting berakhir'
-              : 'Voting telah berakhir'}
+          <div className="rounded-lg border p-8 text-center">
+            <h3 className="mb-2 text-lg font-medium">
+              {hasVoted ? 'Terima kasih atas partisipasi Anda!' : 'Voting telah berakhir'}
+            </h3>
+            <p className="mb-6 text-sm text-muted-foreground">
+              {hasVoted 
+                ? voting.reveal_mode === 'after_vote'
+                  ? 'Anda dapat melihat hasil voting di halaman statistik.'
+                  : 'Hasil akan ditampilkan setelah voting berakhir.'
+                : isEnded
+                  ? 'Anda dapat melihat hasil voting di halaman statistik.'
+                  : 'Voting ini telah berakhir.'}
+            </p>
+            {user?.id === voting.creator_id || 
+             (voting.reveal_mode === 'after_vote' && hasVoted) ||
+             (voting.reveal_mode === 'after_end' && isEnded) ? (
+              <Button asChild>
+                <Link href={`/vote/${voting.id}/stats`}>
+                  <BarChart className="mr-2 h-4 w-4" />
+                  Lihat Statistik
+                </Link>
+              </Button>
+            ) : null}
           </div>
         )}
       </div>
