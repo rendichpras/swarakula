@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Vote, Plus } from 'lucide-react'
+import { Vote, Plus, Moon, Sun } from 'lucide-react'
 import { UserButton } from '@/components/UserButton'
 import { useUser } from '@/hooks/useUser'
+import { useTheme } from 'next-themes'
 
 export function Navbar() {
   const pathname = usePathname()
   const { user } = useUser()
+  const { theme, setTheme } = useTheme()
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,6 +30,16 @@ export function Navbar() {
               </Link>
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 sm:h-9 sm:w-9"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
           <UserButton />
         </div>
       </div>

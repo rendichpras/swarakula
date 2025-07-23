@@ -1,53 +1,107 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { createClient } from '@/lib/supabase'
 import { Database } from '@/types/supabase'
 
 type Voting = Database['public']['Tables']['votings']['Row']
 
 interface VotingCardProps {
   voting: Voting
-  totalVotes: number
 }
 
-export function VotingCard({ voting, totalVotes }: VotingCardProps) {
-  const isEnded = new Date(voting.end_at) < new Date()
+export function VotingCard({ voting }: VotingCardProps) {
+  const [totalVotes, setTotalVotes] = useState<number>(0)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchVotes = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('votes')
+          .select('*', { count: 'exact', head: true })
+          .eq('voting_id', voting.id)
+
+        if (error) throw error
+        setTotalVotes(count || 0)
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVotes()
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel(`votes_${voting.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'votes',
+        filter: `voting_id=eq.${voting.id}`
+      }, async () => {
+        const { count } = await supabase
+          .from('votes')
+          .select('*', { count: 'exact', head: true })
+          .eq('voting_id', voting.id)
+        
+        setTotalVotes(count || 0)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [voting.id, supabase])
+
   const timeLeft = formatDistanceToNow(new Date(voting.end_at), {
     addSuffix: true,
     locale: idLocale
   })
 
   return (
-    <Link href={`/vote/${voting.id}`} className="block h-full">
-      <Card className="h-full transition-all hover:scale-[1.02] hover:shadow-lg">
-        <CardHeader>
-          <CardTitle className="line-clamp-2 text-lg sm:text-xl">{voting.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="line-clamp-3 text-sm text-muted-foreground sm:text-base">
-            {voting.description}
-          </p>
-        </CardContent>
-        <CardFooter className="flex flex-wrap items-center gap-2 sm:gap-4">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={isEnded ? 'secondary' : 'default'} className="whitespace-nowrap">
-              {isEnded ? 'Berakhir' : timeLeft}
-            </Badge>
-            {voting.multiple_choice && (
-              <Badge variant="outline" className="whitespace-nowrap">
-                Pilihan Ganda
-              </Badge>
-            )}
-          </div>
-          <span className="ml-auto text-sm text-muted-foreground sm:text-base">
-            {totalVotes} suara
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
+      <div className="space-y-1.5 p-6">
+        <h3 className="line-clamp-1 text-lg font-semibold leading-none tracking-tight">
+          {voting.title}
+        </h3>
+        <p className="line-clamp-2 text-sm text-muted-foreground">
+          {voting.description}
+        </p>
+        <div className="flex items-center gap-2 pt-1.5">
+          <span className="text-xs text-muted-foreground">
+            Berakhir {timeLeft}
           </span>
-        </CardFooter>
-      </Card>
-    </Link>
+          <span className="text-xs text-muted-foreground">•</span>
+          {loading ? (
+            <Skeleton className="h-4 w-16" />
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              {totalVotes} suara
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="border-t p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm">
+            {voting.multiple_choice ? 'Pilihan Ganda' : 'Pilihan Tunggal'}
+          </span>
+          <Button asChild>
+            <Link href={`/vote/${voting.id}`}>
+              Lihat & Vote
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 } 
